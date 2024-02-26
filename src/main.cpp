@@ -1,56 +1,68 @@
-#include <Wire.h>
 #include <Arduino.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
- 
-#define SCREEN_WIDTH 64 // OLED display width, in pixels
-#define SCREEN_HEIGHT 48 // OLED display height, in pixels
- 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
- 
+
+#include <LiquidCrystal_I2C.h>
+
+#include  <Wire.h>
+
+#include <Adafruit_BMP280.h>
+
+#include <DHTesp.h>
+DHTesp dht;
+
+//initialize the liquid crystal library
+//the first parameter is  the I2C address
+//the second parameter is how many rows are on your screen
+//the  third parameter is how many columns are on your screen
+LiquidCrystal_I2C lcd(0x27,  16, 2);
+
+#define BMP280_ADDRESS 0x76 // I2C address of BMP280 sensor
+#define LED_PIN D5          // Pin for the LED
+#define THRESHOLD_TEMP 20.0 // Temperature threshold in Celsius
+
+Adafruit_BMP280 bmp; // Create BMP280 object
+
 void setup() {
-  Serial.begin(115200);
- 
-  delay(2000);
-  Serial.println(F("Starting!"));
- 
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
+  Wire.begin(); // Initialize I2C communication
+  Serial.begin(9600);
+
+  pinMode(LED_PIN, OUTPUT); // Set LED pin as output
+
+  dht.setup(D5, DHTesp::DHT11);
+
+  // Initialize BMP280 sensor
+  if (!bmp.begin(BMP280_ADDRESS)) {
+    Serial.println("Could not find BMP280 sensor, check wiring!");
+    while (1);
   }
-  Serial.println(F("Initialized!"));
- 
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
- 
-  // Clear the buffer
-  display.clearDisplay();
-  // Refresh (apply command)
-  display.display();
- 
-  // Set color of the text
-  display.setTextColor(SSD1306_WHITE);
-  // Set position of cursor
-  display.setCursor(10, 20);
-  // Set text size multiplier (x1 standard size)
-  display.setTextSize(1);
-  // print text like Serial
-  display.print(F("Hello!"));
- 
-  display.setCursor(10, 50);
-  // Set color of the text and color of the background
-  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-  display.setTextSize(1);
-  display.print(F("Test 123"));
- 
-  // Refresh (apply command)
-  display.display();
+
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0,0);
+  lcd.print("Booting...");
+
+  lcd.setCursor(0,0);
+  delay(250);
+  lcd.clear();
 }
- 
+
 void loop() {
+  float temperature1 = bmp.readTemperature(); // Read temperature from BMP280
+  float temperature2 = dht.getTemperature(); // Read temperature from DHT11
+  Serial.print("Temperature1: ");
+  Serial.print(temperature1);
+  Serial.println(" °C");
+  Serial.print("Temperature2: ");
+  Serial.print(temperature2);
+  Serial.println(" °C");
+
+  lcd.setCursor(0,0);
+
+  lcd.print("Temp1  |  Temp2");
+
+  lcd.setCursor(0,1);
+
+  lcd.print(String(temperature1) + "C |  " + String(temperature2) + "C");
+
+  delay(100); // Delay for stability
 }
